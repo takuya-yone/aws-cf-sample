@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "API sam-sample:HelloNodeFunction",
+            "invokeTarget": {
+                "target": "api",
+                "templatePath": "template.yaml",
+                "logicalId": "HelloNodeFunction"
+            },
+            "api": {
+                "path": "/",
+                "httpMethod": "get",
+                "payload": {
+                    "json": {}
+                }
+            }
+        }
+    ]
+}

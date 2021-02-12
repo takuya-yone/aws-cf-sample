@@ -1,0 +1,315 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: 
+  VPC and Subnet Create
+
+Metadata: 
+  "AWS::CloudFormation::Interface": 
+    ParameterGroups: 
+      - Label: 
+          default: "Project Name Prefix"
+        Parameters: 
+          - PJPrefix
+      - Label: 
+          default: "Network Configuration"
+        Parameters: 
+          - VPCCIDR
+          - PublicSubnetCIDR
+          - PrivateSubnetCIDR
+          - AccessSubnetCIDR
+      - Label: 
+          default: "EC2 Configuration"
+        Parameters: 
+          - EC2KeyPairName
+
+    ParameterLabels: 
+      VPCCIDR: 
+        default: "VPC CIDR"
+      PublicSubnetCIDR: 
+        default: "PublicSubnet CIDR"
+      PrivateSubnetCIDR: 
+        default: "PrivateSubnet CIDR"
+      AccessSubnetCIDR: 
+        default: "AccessSubnet CIDR"
+      EC2KeyPairName: 
+        default: "EC2 KeyPair Name"
+
+
+# ------------------------------------------------------------#
+# Input Parameters
+# ------------------------------------------------------------# 
+Parameters:
+  PJPrefix:
+    Type: String
+
+  VPCCIDR:
+    Type: String
+    Default: "10.0.0.0/16"
+
+  PublicSubnetCIDR:
+    Type: String
+    Default: "10.0.1.0/24"
+
+  PrivateSubnetCIDR:
+    Type: String
+    Default: "10.0.2.0/24"
+
+  AccessSubnetCIDR:
+    Type: String
+    Default: "0.0.0.0/32"
+
+  EC2KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+
+Resources: 
+# ------------------------------------------------------------#
+#  VPC
+# ------------------------------------------------------------#
+  VPC: 
+    Type: "AWS::EC2::VPC"
+    DeletionPolicy: "Delete"
+    Properties: 
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: default
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-vpc"
+
+# InternetGateway Create
+  InternetGateway: 
+    Type: "AWS::EC2::InternetGateway"
+    DeletionPolicy: "Delete"
+    Properties: 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-igw"
+
+# IGW Attach
+  InternetGatewayAttachment: 
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    DeletionPolicy: "Delete"
+    Properties: 
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC 
+
+# ------------------------------------------------------------#
+#  Subnet
+# ------------------------------------------------------------#          
+  PublicSubnet: 
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PublicSubnetCIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-subnet"
+
+  PrivateSubnet: 
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PrivateSubnetCIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-subnet"
+
+# ------------------------------------------------------------#
+#  RouteTable
+# ------------------------------------------------------------#          
+  PublicRouteTable: 
+    Type: "AWS::EC2::RouteTable"
+    DeletionPolicy: "Delete"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-route"
+
+  PrivateRouteTable: 
+    Type: "AWS::EC2::RouteTable"
+    DeletionPolicy: "Delete"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-route"
+
+# ------------------------------------------------------------#
+# Routing
+# ------------------------------------------------------------# 
+  PublicRoute: 
+    Type: "AWS::EC2::Route"
+    DeletionPolicy: "Delete"
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable 
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway 
+
+
+# ------------------------------------------------------------#
+# RouteTable Associate
+# ------------------------------------------------------------# 
+  PublicSubnetRouteTableAssociation: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    DeletionPolicy: "Delete"
+    Properties: 
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnetRouteTableAssociation: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    DeletionPolicy: "Delete"
+    Properties: 
+      SubnetId: !Ref PrivateSubnet
+      RouteTableId: !Ref PrivateRouteTable
+
+# ------------------------------------------------------------#
+#  Security Group
+# ------------------------------------------------------------# 
+  PubAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: "Delete"
+    Properties:
+      GroupDescription: "yone-cf-pubaccess-sg"
+      GroupName: "yone-cf-pubaccess-sg"     
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref AccessSubnetCIDR
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AccessSubnetCIDR
+
+  SgAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: "Delete"
+    Properties:
+      GroupDescription: "yone-cf-sgaccess-sg"
+      GroupName: "yone-cf-sgaccess-sg"     
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          SourceSecurityGroupId: !Ref PubAccessSecurityGroup
+
+
+# ------------------------------------------------------------#
+#  EC2
+# ------------------------------------------------------------# 
+  PublicEC2No01:
+    Type: AWS::EC2::Instance
+    DeletionPolicy: "Delete"
+    Properties: 
+      ImageId: "ami-0992fc94ca0f1415a"
+      InstanceType: "t2.nano"
+      KeyName: !Ref EC2KeyPairName
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !Ref PubAccessSecurityGroup
+            - !Ref SgAccessSecurityGroup
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-ec2-no1"
+
+  PrivateEC2No01:
+    Type: AWS::EC2::Instance
+    DeletionPolicy: "Delete"
+    Properties: 
+      ImageId: "ami-0992fc94ca0f1415a"
+      InstanceType: "t2.nano"
+      KeyName: !Ref EC2KeyPairName
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "false"
+          DeviceIndex: "0"
+          SubnetId: !Ref PrivateSubnet
+          GroupSet:
+            - !Ref PubAccessSecurityGroup
+            - !Ref SgAccessSecurityGroup
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-ec2-no1"  
+# ------------------------------------------------------------#
+# Output Parameters
+# ------------------------------------------------------------#                
+# VPC
+Outputs:
+  VPC:
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${PJPrefix}-vpc"
+
+  VPCCIDR:
+    Value: !Ref VPCCIDR
+    Export:
+      Name: !Sub "${PJPrefix}-vpc-cidr"
+
+# Subnet
+  PublicSubnet:
+    Value: !Ref PublicSubnet
+    Export:
+      Name: !Sub "${PJPrefix}-public-subnet"
+
+  PublicSubnetCIDR:
+    Value: !Ref PublicSubnetCIDR
+    Export:
+      Name: !Sub "${PJPrefix}-public-subnet-cidr"
+
+  PrivateSubnet:
+    Value: !Ref PrivateSubnet
+    Export:
+      Name: !Sub "${PJPrefix}-private-subnet"
+
+  PrivateSubnetCIDR:
+    Value: !Ref PrivateSubnetCIDR
+    Export:
+      Name: !Sub "${PJPrefix}-private-subnet-cidr"
+
+  AccessSubnetCIDR: 
+    Value: !Ref AccessSubnetCIDR
+    Export:
+      Name: !Sub "${PJPrefix}-access-subnet-cidr"
+
+# Route
+  PublicRouteTable:
+    Value: !Ref PublicRouteTable
+    Export:
+      Name: !Sub "${PJPrefix}-public-route"
+
+  PrivateRouteTable:
+    Value: !Ref PrivateRouteTable
+    Export:
+      Name: !Sub "${PJPrefix}-private-route"
+
+# Security Group
+  PubAccessSecurityGroup:
+    Value: !Ref PubAccessSecurityGroup
+    Export:
+      Name: !Sub "${PJPrefix}-pubaccess-security-group"
+
+  SgAccessSecurityGroup:
+    Value: !Ref SgAccessSecurityGroup
+    Export:
+      Name: !Sub "${PJPrefix}-sgaccess-security-group"
+
+# EC2
+  PublicEC2No01:
+    Value: !Ref PublicEC2No01
+    Export:
+      Name: !Sub "${PJPrefix}-public-ec2-no1"
+      
+  PrivateEC2No01:
+    Value: !Ref PrivateEC2No01
+    Export:
+      Name: !Sub "${PJPrefix}-private-ec2-no1"
