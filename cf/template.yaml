@@ -1,4 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
+
 Description: 
   VPC and Subnet Create
 
@@ -69,8 +70,8 @@ Resources:
     DeletionPolicy: "Delete"
     Properties: 
       CidrBlock: !Ref VPCCIDR
-      EnableDnsSupport: "true"
-      EnableDnsHostnames: "true"
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
       InstanceTenancy: default
       Tags: 
         - Key: Name
@@ -149,7 +150,14 @@ Resources:
       RouteTableId: !Ref PublicRouteTable 
       DestinationCidrBlock: "0.0.0.0/0"
       GatewayId: !Ref InternetGateway 
-
+      
+  # PrivateRoute: 
+  #   Type: "AWS::EC2::Route"
+  #   DeletionPolicy: "Delete"
+  #   Properties: 
+  #     RouteTableId: !Ref PrivateRouteTable 
+  #     DestinationCidrBlock: "0.0.0.0/0"
+  #     GatewayId: !Ref InternetGateway 
 
 # ------------------------------------------------------------#
 # RouteTable Associate
@@ -171,12 +179,12 @@ Resources:
 # ------------------------------------------------------------#
 #  Security Group
 # ------------------------------------------------------------# 
-  PubAccessSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
+  PublicAccessSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
     DeletionPolicy: "Delete"
     Properties:
-      GroupDescription: "yone-cf-pubaccess-sg"
-      GroupName: "yone-cf-pubaccess-sg"     
+      GroupDescription: "yone-cf-publicaccess-sg"
+      GroupName: "yone-cf-publicaccess-sg"     
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -187,25 +195,126 @@ Resources:
           FromPort: 22
           ToPort: 22
           CidrIp: !Ref AccessSubnetCIDR
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: !Ref PrivateSubnetCIDR
+      # SecurityGroupEgress:
+      #   - IpProtocol: -1
+      #     FromPort: -1
+      #     ToPort: -1
+      #     CidrIp: "0.0.0.0/0"
 
-  SgAccessSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
+  PrivateAccessSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
     DeletionPolicy: "Delete"
     Properties:
-      GroupDescription: "yone-cf-sgaccess-sg"
-      GroupName: "yone-cf-sgaccess-sg"     
+      GroupDescription: "yone-cf-privateaccess-sg"
+      GroupName: "yone-cf-privateaccess-sg"     
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: -1
           FromPort: -1
           ToPort: -1
-          SourceSecurityGroupId: !Ref PubAccessSecurityGroup
+          SourceSecurityGroupId: !Ref PublicAccessSecurityGroup
+      # SecurityGroupEgress:
+      #   - IpProtocol: -1
+      #     FromPort: -1
+      #     ToPort: -1
+      #     CidrIp: "0.0.0.0/0"
 
+# ------------------------------------------------------------#
+#  VPC Endpoint
+# ------------------------------------------------------------# 
+
+  SSMEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    DeletionPolicy: "Delete"
+    Properties:
+      VpcId: !Ref VPC
+      SubnetIds:
+        - !Ref PrivateSubnet
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !Ref PublicAccessSecurityGroup
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+      VpcEndpointType: "Interface"
+      # Tags: 
+      #   - Key: Name
+      #     Value: !Sub "${PJPrefix}-ssm-endpoint"
+
+  EC2MessageEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    DeletionPolicy: "Delete"
+    Properties:
+      VpcId: !Ref VPC
+      SubnetIds:
+        - !Ref PrivateSubnet
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !Ref PublicAccessSecurityGroup
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
+      VpcEndpointType: "Interface"
+      # Tags: 
+      #   - Key: Name
+      #     Value: !Sub "${PJPrefix}-ec2message-endpoint"
+
+  SSMmessageEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    DeletionPolicy: "Delete"
+    Properties:
+      VpcId: !Ref VPC
+      SubnetIds:
+        - !Ref PrivateSubnet
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !Ref PublicAccessSecurityGroup
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+      VpcEndpointType: "Interface"
+      # Tags: 
+      #   - Key: Name
+      #     Value: !Sub "${PJPrefix}-ssmmessage-endpoint"
+
+# ------------------------------------------------------------#
+#  IAM
+# ------------------------------------------------------------# 
+  TestSSMRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: "Delete"
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "ec2.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Description:
+        Describe what you want
+      ManagedPolicyArns: 
+        - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
+      RoleName: "test-ssm-role"
+      # Policies: 
+      #   - PolicyName: AmazonEC2RoleforSSM
+      #     PolicyDocument:
+      #       Version: "2012-10-17"
+      #       Statement:
+      #         - Effect: "Allow"
+      #           Action: "*"
+      #           Resource: "*"
+  TestSSMInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    DeletionPolicy: "Delete"
+    Properties: 
+      InstanceProfileName: "test-EC2instanceprofileforSSM"
+      # Path: String
+      Roles: 
+        - !Ref TestSSMRole
 
 # ------------------------------------------------------------#
 #  EC2
 # ------------------------------------------------------------# 
-  PublicEC2No01:
+  PublicEC2:
     Type: AWS::EC2::Instance
     DeletionPolicy: "Delete"
     Properties: 
@@ -213,17 +322,18 @@ Resources:
       InstanceType: "t2.nano"
       KeyName: !Ref EC2KeyPairName
       NetworkInterfaces:
-        - AssociatePublicIpAddress: "true"
+        - AssociatePublicIpAddress: true
           DeviceIndex: "0"
           SubnetId: !Ref PublicSubnet
           GroupSet:
-            - !Ref PubAccessSecurityGroup
-            - !Ref SgAccessSecurityGroup
+            - !Ref PublicAccessSecurityGroup
+      IamInstanceProfile:
+        !Ref TestSSMInstanceProfile
       Tags: 
         - Key: Name
-          Value: !Sub "${PJPrefix}-public-ec2-no1"
+          Value: !Sub "${PJPrefix}-public-ec2"
 
-  PrivateEC2No01:
+  PrivateEC2:
     Type: AWS::EC2::Instance
     DeletionPolicy: "Delete"
     Properties: 
@@ -231,15 +341,17 @@ Resources:
       InstanceType: "t2.nano"
       KeyName: !Ref EC2KeyPairName
       NetworkInterfaces:
-        - AssociatePublicIpAddress: "false"
+        - AssociatePublicIpAddress: false
           DeviceIndex: "0"
           SubnetId: !Ref PrivateSubnet
           GroupSet:
-            - !Ref PubAccessSecurityGroup
-            - !Ref SgAccessSecurityGroup
+            - !Ref PrivateAccessSecurityGroup
+      IamInstanceProfile:
+        !Ref TestSSMInstanceProfile
       Tags: 
         - Key: Name
-          Value: !Sub "${PJPrefix}-private-ec2-no1"  
+          Value: !Sub "${PJPrefix}-private-ec2"  
+
 # ------------------------------------------------------------#
 # Output Parameters
 # ------------------------------------------------------------#                
@@ -293,23 +405,23 @@ Outputs:
       Name: !Sub "${PJPrefix}-private-route"
 
 # Security Group
-  PubAccessSecurityGroup:
-    Value: !Ref PubAccessSecurityGroup
+  PublicAccessSecurityGroup:
+    Value: !Ref PublicAccessSecurityGroup
     Export:
       Name: !Sub "${PJPrefix}-pubaccess-security-group"
 
-  SgAccessSecurityGroup:
-    Value: !Ref SgAccessSecurityGroup
+  PrivateAccessSecurityGroup:
+    Value: !Ref PrivateAccessSecurityGroup
     Export:
       Name: !Sub "${PJPrefix}-sgaccess-security-group"
 
 # EC2
-  PublicEC2No01:
-    Value: !Ref PublicEC2No01
+  PublicEC2:
+    Value: !Ref PublicEC2
     Export:
-      Name: !Sub "${PJPrefix}-public-ec2-no1"
+      Name: !Sub "${PJPrefix}-public-ec2"
       
-  PrivateEC2No01:
-    Value: !Ref PrivateEC2No01
+  PrivateEC2:
+    Value: !Ref PrivateEC2
     Export:
-      Name: !Sub "${PJPrefix}-private-ec2-no1"
+      Name: !Sub "${PJPrefix}-private-ec2"

@@ -11,6 +11,9 @@ provider "aws" {
     region = var.region
 }
 
+# ------------------------------------------------------------#
+#  VPC
+# ------------------------------------------------------------#
 resource "aws_vpc" "test-VPC" {
     cidr_block = "10.1.0.0/16"
     instance_tenancy = "default"
@@ -26,6 +29,9 @@ resource "aws_internet_gateway" "test-IGW" {
     # depends_on = [aws_vpc.test-VPC]
 }
 
+# ------------------------------------------------------------#
+#  Subnet
+# ------------------------------------------------------------#    
 resource "aws_subnet" "test-pub-subnet" {
   vpc_id     = aws_vpc.test-VPC.id
   cidr_block = "10.1.1.0/24"
@@ -44,6 +50,9 @@ resource "aws_subnet" "test-private-subnet" {
   }
 }
 
+# ------------------------------------------------------------#
+#  RouteTable
+# ------------------------------------------------------------#   
 resource "aws_route_table" "test-pub-route" {
   vpc_id = aws_vpc.test-VPC.id
 
@@ -71,6 +80,9 @@ resource "aws_route_table" "test-private-route" {
   }
 }
 
+# ------------------------------------------------------------#
+# RouteTable Associate
+# ------------------------------------------------------------# 
 resource "aws_route_table_association" "test-pub-subnet" {
   subnet_id      = aws_subnet.test-pub-subnet.id
   route_table_id = aws_route_table.test-pub-route.id
@@ -81,6 +93,9 @@ resource "aws_route_table_association" "test-private-subnet" {
   route_table_id = aws_route_table.test-private-route.id
 }
 
+# ------------------------------------------------------------#
+#  Security Group
+# ------------------------------------------------------------# 
 resource "aws_security_group" "test-pub-sg" {
   vpc_id = aws_vpc.test-VPC.id
 
@@ -168,6 +183,9 @@ resource "aws_vpc_endpoint" "ec2messages" {
   }
 }
 
+# ------------------------------------------------------------#
+#  VPC Endpoint
+# ------------------------------------------------------------# 
 resource "aws_vpc_endpoint" "ssmmessages" {
   vpc_id            = aws_vpc.test-VPC.id
   service_name      = "com.amazonaws.${var.region}.ssmmessages"
@@ -180,6 +198,9 @@ resource "aws_vpc_endpoint" "ssmmessages" {
   }
 }
 
+# ------------------------------------------------------------#
+#  IAM Role
+# ------------------------------------------------------------# 
 resource "aws_iam_role" "test-EC2roleforSSM" {
   name = "test-EC2roleforSSM"
   assume_role_policy = jsonencode({
@@ -306,6 +327,9 @@ resource "aws_iam_instance_profile" "test-EC2instanceprofileforSSM" {
     role = aws_iam_role.test-EC2roleforSSM.name
 }
 
+# ------------------------------------------------------------#
+#  EC2
+# ------------------------------------------------------------# 
 resource "aws_instance" "test-pub-ec2" {
     ami                         = "ami-0992fc94ca0f1415a"
     # availability_zone           = "ap-northeast-1c"
