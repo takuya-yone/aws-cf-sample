@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
 Description: 
-  VPC and Subnet Create
+  Create Env
 
 Metadata: 
   "AWS::CloudFormation::Interface": 
@@ -183,8 +183,8 @@ Resources:
     Type: "AWS::EC2::SecurityGroup"
     DeletionPolicy: "Delete"
     Properties:
-      GroupDescription: "yone-cf-publicaccess-sg"
-      GroupName: "yone-cf-publicaccess-sg"     
+      GroupDescription: !Sub "${PJPrefix}-publicaccess-sg"
+      GroupName: !Sub "${PJPrefix}-publicaccess-sg"     
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -199,29 +199,30 @@ Resources:
           FromPort: -1
           ToPort: -1
           CidrIp: !Ref PrivateSubnetCIDR
-      # SecurityGroupEgress:
-      #   - IpProtocol: -1
-      #     FromPort: -1
-      #     ToPort: -1
-      #     CidrIp: "0.0.0.0/0"
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: "0.0.0.0/0"
 
   PrivateAccessSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     DeletionPolicy: "Delete"
     Properties:
-      GroupDescription: "yone-cf-privateaccess-sg"
-      GroupName: "yone-cf-privateaccess-sg"     
+      GroupDescription: !Sub "${PJPrefix}-privateaccess-sg"
+      GroupName: !Sub "${PJPrefix}-privateaccess-sg"     
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: -1
           FromPort: -1
           ToPort: -1
+          # CidrIp: !Ref PublicSubnetCIDR 
           SourceSecurityGroupId: !Ref PublicAccessSecurityGroup
-      # SecurityGroupEgress:
-      #   - IpProtocol: -1
-      #     FromPort: -1
-      #     ToPort: -1
-      #     CidrIp: "0.0.0.0/0"
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: "0.0.0.0/0"
 
 # ------------------------------------------------------------#
 #  VPC Endpoint
@@ -327,8 +328,8 @@ Resources:
           SubnetId: !Ref PublicSubnet
           GroupSet:
             - !Ref PublicAccessSecurityGroup
-      IamInstanceProfile:
-        !Ref TestSSMInstanceProfile
+      # IamInstanceProfile:
+      #   !Ref TestSSMInstanceProfile
       Tags: 
         - Key: Name
           Value: !Sub "${PJPrefix}-public-ec2"
