@@ -96,9 +96,9 @@ resource "aws_route_table_association" "test-private-subnet" {
 # ------------------------------------------------------------#
 #  Security Group
 # ------------------------------------------------------------# 
-resource "aws_security_group" "test-pub-sg" {
+resource "aws_security_group" "test-public-sg" {
+  # name = "test-public-sg"
   vpc_id = aws_vpc.test-VPC.id
-
   ingress {
     protocol  = "tcp"
     # self      = true
@@ -115,13 +115,14 @@ resource "aws_security_group" "test-pub-sg" {
     cidr_blocks = [var.AccessSubnetCIDR]
   }
 
-  ingress {
-    protocol  = "-1"
-    # self      = true
-    from_port = 0
-    to_port   = 0
-    cidr_blocks = [aws_subnet.test-private-subnet.cidr_block]
-  }
+  # ingress {
+  #   protocol  = "-1"
+  #   # self      = true
+  #   from_port = 0
+  #   to_port   = 0
+  #   # cidr_blocks = [aws_subnet.test-private-subnet.cidr_block]
+  #   security_groups = [aws_security_group.test-private-sg.name]
+  # }
   
   egress {
     protocol    = "-1"
@@ -131,26 +132,18 @@ resource "aws_security_group" "test-pub-sg" {
   }
 
     tags = {
-    Name = "test-pub-sg"
+    Name = "test-public-sg"
   }
 }
 
 resource "aws_security_group" "test-private-sg" {
+  # name = "test-private-sg"
   vpc_id = aws_vpc.test-VPC.id
-
-  ingress {
-    protocol  = "-1"
-    # self      = true
-    from_port = 0
-    to_port   = 0
-    cidr_blocks = [aws_subnet.test-pub-subnet.cidr_block]
-  }
 
   egress {
     protocol    = "-1"
     from_port   = 0
     to_port     = 0
-    # cidr_blocks = [aws_subnet.test-pub-subnet.cidr_block]
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -159,11 +152,39 @@ resource "aws_security_group" "test-private-sg" {
   }
 }
 
+# ------------------------------------------------------------#
+#  Public Rule
+# ------------------------------------------------------------# 
+resource "aws_security_group_rule" "test-public-sg-rule" {
+  type                     = "ingress"
+  protocol                 = "-1"
+  from_port                = 0
+  to_port                  = 0
+  source_security_group_id = aws_security_group.test-private-sg.id
+  security_group_id        = aws_security_group.test-public-sg.id
+}
+
+# ------------------------------------------------------------#
+#  Private Rule
+# ------------------------------------------------------------# 
+resource "aws_security_group_rule" "test-private-sg-rule" {
+  type                     = "ingress"
+  protocol                 = "-1"
+  from_port                = 0
+  to_port                  = 0
+  source_security_group_id = aws_security_group.test-public-sg.id
+  security_group_id        = aws_security_group.test-private-sg.id
+}
+
+
+# ------------------------------------------------------------#
+#  VPC Endpoint
+# ------------------------------------------------------------# 
 resource "aws_vpc_endpoint" "ssm" {
   vpc_id            = aws_vpc.test-VPC.id
   service_name      = "com.amazonaws.${var.region}.ssm"
   vpc_endpoint_type = "Interface"
-  security_group_ids = [aws_security_group.test-pub-sg.id]
+  security_group_ids = [aws_security_group.test-public-sg.id]
   subnet_ids = [aws_subnet.test-private-subnet.id]
   private_dns_enabled = true
   tags = {
@@ -175,7 +196,7 @@ resource "aws_vpc_endpoint" "ec2messages" {
   vpc_id            = aws_vpc.test-VPC.id
   service_name      = "com.amazonaws.${var.region}.ec2messages"
   vpc_endpoint_type = "Interface"
-  security_group_ids = [aws_security_group.test-pub-sg.id]
+  security_group_ids = [aws_security_group.test-public-sg.id]
   subnet_ids = [aws_subnet.test-private-subnet.id]
   private_dns_enabled = true
   tags = {
@@ -183,14 +204,11 @@ resource "aws_vpc_endpoint" "ec2messages" {
   }
 }
 
-# ------------------------------------------------------------#
-#  VPC Endpoint
-# ------------------------------------------------------------# 
 resource "aws_vpc_endpoint" "ssmmessages" {
   vpc_id            = aws_vpc.test-VPC.id
   service_name      = "com.amazonaws.${var.region}.ssmmessages"
   vpc_endpoint_type = "Interface"
-  security_group_ids = [aws_security_group.test-pub-sg.id]
+  security_group_ids = [aws_security_group.test-public-sg.id]
   subnet_ids = [aws_subnet.test-private-subnet.id]
   private_dns_enabled = true
   tags = {
@@ -329,27 +347,15 @@ resource "aws_iam_instance_profile" "test-EC2instanceprofileforSSM" {
 
 # ------------------------------------------------------------#
 #  EC2
-# ------------------------------------------------------------# 
+# # ------------------------------------------------------------# 
 resource "aws_instance" "test-pub-ec2" {
     ami                         = "ami-0992fc94ca0f1415a"
-    # availability_zone           = "ap-northeast-1c"
-    # ebs_optimized               = false
     instance_type               = "t2.nano"
-    # monitoring                  = false
     key_name                    = "takuya-yn"
     subnet_id                   = aws_subnet.test-pub-subnet.id
-    vpc_security_group_ids      = [aws_security_group.test-pub-sg.id]
+    vpc_security_group_ids      = [aws_security_group.test-public-sg.id]
     associate_public_ip_address = true
-    iam_instance_profile         = aws_iam_instance_profile.test-EC2instanceprofileforSSM.name
-    # private_ip                  = "10.0.0.10"
-    # source_dest_check           = true
-
-    # root_block_device {
-    #     volume_type           = "gp2"
-    #     volume_size           = 20
-    #     delete_on_termination = true
-    # }
-
+    # iam_instance_profile         = aws_iam_instance_profile.test-EC2instanceprofileforSSM.name
     tags = {
         "Name" = "test-pub-ec2"
     }
@@ -357,24 +363,12 @@ resource "aws_instance" "test-pub-ec2" {
 
 resource "aws_instance" "test-private-ec2" {
     ami                         = "ami-0992fc94ca0f1415a"
-    # availability_zone           = "ap-northeast-1c"
-    # ebs_optimized               = false
     instance_type               = "t2.nano"
-    # monitoring                  = false
     key_name                    = "takuya-yn"
     subnet_id                   = aws_subnet.test-private-subnet.id
     vpc_security_group_ids      = [aws_security_group.test-private-sg.id]
     associate_public_ip_address = false
     iam_instance_profile         = aws_iam_instance_profile.test-EC2instanceprofileforSSM.name
-    # private_ip                  = "10.0.0.10"
-    # source_dest_check           = true
-
-    # root_block_device {
-    #     volume_type           = "gp2"
-    #     volume_size           = 20
-    #     delete_on_termination = true
-    # }
-
     tags = {
         "Name" = "test-private-ec2"
     }
