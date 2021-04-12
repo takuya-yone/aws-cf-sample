@@ -1,0 +1,16 @@
+Parameters:
+  Prefix:
+    Type: String
+  keyname:
+    Type: AWS::EC2::KeyPair::KeyName
+
+Resources:
+  testVPC:
+    Type: AWS::EC2::VPC
+    DeletionPolicy: "Delete"
+    Properties:
+      CidrBlock: 192.168.0.0/24
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${Prefix}-vpc"
