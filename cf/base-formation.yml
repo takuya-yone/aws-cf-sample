@@ -58,8 +58,17 @@ Parameters:
     Type: String
     Default: "0.0.0.0/32"
 
+  # Proxy1CIDR:
+  #   Type: String
+  #   Default: "0.0.0.0/32"
+
+  # Proxy2CIDR:
+  #   Type: String
+  #   Default: "0.0.0.0/32"
+
   EC2KeyPairName:
     Type: AWS::EC2::KeyPair::KeyName
+    Default: ""
 
 Resources: 
 # ------------------------------------------------------------#
@@ -187,18 +196,22 @@ Resources:
       GroupName: !Sub "${PJPrefix}-publicaccess-sg"     
       VpcId: !Ref VPC
       SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: !Ref AccessSubnetCIDR
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: !Ref AccessSubnetCIDR
         - IpProtocol: -1
           FromPort: -1
           ToPort: -1
           CidrIp: !Ref PrivateSubnetCIDR
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: "{{resolve:ssm:Pub-Access-CIDR:1}}"
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: "{{resolve:ssm:Proxy-CIDR-01:1}}"
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: "{{resolve:ssm:Proxy-CIDR-02:1}}"
       SecurityGroupEgress:
         - IpProtocol: -1
           FromPort: -1
@@ -228,50 +241,50 @@ Resources:
 #  VPC Endpoint
 # ------------------------------------------------------------# 
 
-  SSMEndpoint:
-    Type: "AWS::EC2::VPCEndpoint"
-    DeletionPolicy: "Delete"
-    Properties:
-      VpcId: !Ref VPC
-      SubnetIds:
-        - !Ref PrivateSubnet
-      PrivateDnsEnabled: true
-      SecurityGroupIds:
-        - !Ref PublicAccessSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
-      VpcEndpointType: "Interface"
+  # SSMEndpoint:
+  #   Type: "AWS::EC2::VPCEndpoint"
+  #   DeletionPolicy: "Delete"
+  #   Properties:
+  #     VpcId: !Ref VPC
+  #     SubnetIds:
+  #       - !Ref PrivateSubnet
+  #     PrivateDnsEnabled: true
+  #     SecurityGroupIds:
+  #       - !Ref PublicAccessSecurityGroup
+  #     ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+  #     VpcEndpointType: "Interface"
       # Tags: 
       #   - Key: Name
       #     Value: !Sub "${PJPrefix}-ssm-endpoint"
 
-  EC2MessageEndpoint:
-    Type: "AWS::EC2::VPCEndpoint"
-    DeletionPolicy: "Delete"
-    Properties:
-      VpcId: !Ref VPC
-      SubnetIds:
-        - !Ref PrivateSubnet
-      PrivateDnsEnabled: true
-      SecurityGroupIds:
-        - !Ref PublicAccessSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
-      VpcEndpointType: "Interface"
+  # EC2MessageEndpoint:
+  #   Type: "AWS::EC2::VPCEndpoint"
+  #   DeletionPolicy: "Delete"
+  #   Properties:
+  #     VpcId: !Ref VPC
+  #     SubnetIds:
+  #       - !Ref PrivateSubnet
+  #     PrivateDnsEnabled: true
+  #     SecurityGroupIds:
+  #       - !Ref PublicAccessSecurityGroup
+  #     ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
+  #     VpcEndpointType: "Interface"
       # Tags: 
       #   - Key: Name
       #     Value: !Sub "${PJPrefix}-ec2message-endpoint"
 
-  SSMmessageEndpoint:
-    Type: "AWS::EC2::VPCEndpoint"
-    DeletionPolicy: "Delete"
-    Properties:
-      VpcId: !Ref VPC
-      SubnetIds:
-        - !Ref PrivateSubnet
-      PrivateDnsEnabled: true
-      SecurityGroupIds:
-        - !Ref PublicAccessSecurityGroup
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
-      VpcEndpointType: "Interface"
+  # SSMmessageEndpoint:
+  #   Type: "AWS::EC2::VPCEndpoint"
+  #   DeletionPolicy: "Delete"
+  #   Properties:
+  #     VpcId: !Ref VPC
+  #     SubnetIds:
+  #       - !Ref PrivateSubnet
+  #     PrivateDnsEnabled: true
+  #     SecurityGroupIds:
+  #       - !Ref PublicAccessSecurityGroup
+  #     ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+  #     VpcEndpointType: "Interface"
       # Tags: 
       #   - Key: Name
       #     Value: !Sub "${PJPrefix}-ssmmessage-endpoint"
@@ -279,22 +292,22 @@ Resources:
 # ------------------------------------------------------------#
 #  IAM
 # ------------------------------------------------------------# 
-  TestSSMRole:
-    Type: AWS::IAM::Role
-    DeletionPolicy: "Delete"
-    Properties: 
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: "Allow"
-            Principal:
-              Service: "ec2.amazonaws.com"
-            Action: "sts:AssumeRole"
-      Description:
-        Describe what you want
-      ManagedPolicyArns: 
-        - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
-      RoleName: "test-ssm-role"
+  # TestSSMRole:
+  #   Type: AWS::IAM::Role
+  #   DeletionPolicy: "Delete"
+  #   Properties: 
+  #     AssumeRolePolicyDocument:
+  #       Version: "2012-10-17"
+  #       Statement:
+  #         - Effect: "Allow"
+  #           Principal:
+  #             Service: "ec2.amazonaws.com"
+  #           Action: "sts:AssumeRole"
+  #     Description:
+  #       Describe what you want
+  #     ManagedPolicyArns: 
+  #       - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
+  #     RoleName: "test-ssm-role"
       # Policies: 
       #   - PolicyName: AmazonEC2RoleforSSM
       #     PolicyDocument:
@@ -303,14 +316,21 @@ Resources:
       #         - Effect: "Allow"
       #           Action: "*"
       #           Resource: "*"
-  TestSSMInstanceProfile:
+  # TestSSMInstanceProfile:
+  #   Type: AWS::IAM::InstanceProfile
+  #   DeletionPolicy: "Delete"
+  #   Properties: 
+  #     InstanceProfileName: "test-EC2instanceprofileforSSM"
+  #     # Path: String
+  #     Roles: 
+  #       - !Ref TestSSMRole
+
+  IamInstanceProfile:
     Type: AWS::IAM::InstanceProfile
-    DeletionPolicy: "Delete"
-    Properties: 
-      InstanceProfileName: "test-EC2instanceprofileforSSM"
-      # Path: String
-      Roles: 
-        - !Ref TestSSMRole
+    Properties:
+      Path: /
+      Roles:
+        - "full"
 
 # ------------------------------------------------------------#
 #  EC2
@@ -319,8 +339,8 @@ Resources:
     Type: AWS::EC2::Instance
     DeletionPolicy: "Delete"
     Properties: 
-      ImageId: "ami-0992fc94ca0f1415a"
-      InstanceType: "t2.nano"
+      ImageId: "ami-0222682d9e306dfb1"
+      InstanceType: "t2.small"
       KeyName: !Ref EC2KeyPairName
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
@@ -328,8 +348,8 @@ Resources:
           SubnetId: !Ref PublicSubnet
           GroupSet:
             - !Ref PublicAccessSecurityGroup
-      # IamInstanceProfile:
-      #   !Ref TestSSMInstanceProfile
+      IamInstanceProfile:
+        !Ref IamInstanceProfile
       Tags: 
         - Key: Name
           Value: !Sub "${PJPrefix}-public-ec2"
@@ -338,8 +358,8 @@ Resources:
     Type: AWS::EC2::Instance
     DeletionPolicy: "Delete"
     Properties: 
-      ImageId: "ami-0992fc94ca0f1415a"
-      InstanceType: "t2.nano"
+      ImageId: "ami-0222682d9e306dfb1"
+      InstanceType: "t2.small"
       KeyName: !Ref EC2KeyPairName
       NetworkInterfaces:
         - AssociatePublicIpAddress: false
@@ -348,7 +368,7 @@ Resources:
           GroupSet:
             - !Ref PrivateAccessSecurityGroup
       IamInstanceProfile:
-        !Ref TestSSMInstanceProfile
+        !Ref IamInstanceProfile
       Tags: 
         - Key: Name
           Value: !Sub "${PJPrefix}-private-ec2"  
