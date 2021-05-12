@@ -14,25 +14,29 @@ Metadata:
           default: "Network Configuration"
         Parameters: 
           - VPCCIDR
-          - PublicSubnetCIDR
-          - PrivateSubnetCIDR
+          - PublicSubnetACIDR
+          - PublicSubnetCCIDR
+          - PublicSubnetDCIDR
+          - PrivateSubnetACIDR
+          - PrivateSubnetCCIDR
+          - PrivateSubnetDCIDR
           - AccessSubnetCIDR
       - Label: 
           default: "EC2 Configuration"
         Parameters: 
           - EC2KeyPairName
 
-    ParameterLabels: 
-      VPCCIDR: 
-        default: "VPC CIDR"
-      PublicSubnetCIDR: 
-        default: "PublicSubnet CIDR"
-      PrivateSubnetCIDR: 
-        default: "PrivateSubnet CIDR"
-      AccessSubnetCIDR: 
-        default: "AccessSubnet CIDR"
-      EC2KeyPairName: 
-        default: "EC2 KeyPair Name"
+    # ParameterLabels: 
+    #   VPCCIDR: 
+    #     default: "VPC CIDR"
+    #   PublicSubnetCIDR: 
+    #     default: "PublicSubnet CIDR"
+    #   PrivateSubnetCIDR: 
+    #     default: "PrivateSubnet CIDR"
+    #   AccessSubnetCIDR: 
+    #     default: "AccessSubnet CIDR"
+    #   EC2KeyPairName: 
+    #     default: "EC2 KeyPair Name"
 
 
 # ------------------------------------------------------------#
@@ -46,13 +50,31 @@ Parameters:
     Type: String
     Default: "10.0.0.0/16"
 
-  PublicSubnetCIDR:
+  PublicSubnetACIDR:
     Type: String
     Default: "10.0.1.0/24"
 
-  PrivateSubnetCIDR:
+  PublicSubnetCCIDR:
     Type: String
     Default: "10.0.2.0/24"
+    
+  PublicSubnetDCIDR:
+    Type: String
+    Default: "10.0.3.0/24"
+
+
+  PrivateSubnetACIDR:
+    Type: String
+    Default: "10.0.4.0/24"
+
+  PrivateSubnetCCIDR:
+    Type: String
+    Default: "10.0.5.0/24"
+
+  PrivateSubnetDCIDR:
+    Type: String
+    Default: "10.0.6.0/24"
+
 
   AccessSubnetCIDR:
     Type: String
@@ -106,28 +128,71 @@ Resources:
 # ------------------------------------------------------------#
 #  Subnet
 # ------------------------------------------------------------#          
-  PublicSubnet: 
+  PublicSubnetA: 
     Type: "AWS::EC2::Subnet"
     DeletionPolicy: "Delete"
     Properties: 
       AvailabilityZone: "ap-northeast-1a"
-      CidrBlock: !Ref PublicSubnetCIDR
+      CidrBlock: !Ref PublicSubnetACIDR
       VpcId: !Ref VPC 
       Tags: 
         - Key: Name
-          Value: !Sub "${PJPrefix}-public-subnet"
+          Value: !Sub "${PJPrefix}-public-subnet-a"
 
-  PrivateSubnet: 
+  PublicSubnetC: 
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref PublicSubnetCCIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-subnet-c"
+
+  PublicSubnetD: 
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1d"
+      CidrBlock: !Ref PublicSubnetDCIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-public-subnet-d"
+
+  PrivateSubnetA: 
     Type: "AWS::EC2::Subnet"
     DeletionPolicy: "Delete"
     Properties: 
       AvailabilityZone: "ap-northeast-1a"
-      CidrBlock: !Ref PrivateSubnetCIDR
+      CidrBlock: !Ref PrivateSubnetACIDR
       VpcId: !Ref VPC 
       Tags: 
         - Key: Name
-          Value: !Sub "${PJPrefix}-private-subnet"
+          Value: !Sub "${PJPrefix}-private-subnet-a"
 
+  PrivateSubnetC: 
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref PrivateSubnetCCIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-subnet-c"
+
+  PrivateSubnetD: 
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Delete"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1d"
+      CidrBlock: !Ref PrivateSubnetDCIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-private-subnet-d"
 # ------------------------------------------------------------#
 #  RouteTable
 # ------------------------------------------------------------#          
@@ -171,18 +236,46 @@ Resources:
 # ------------------------------------------------------------#
 # RouteTable Associate
 # ------------------------------------------------------------# 
-  PublicSubnetRouteTableAssociation: 
+  PublicSubnetRouteTableAssociationA: 
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     DeletionPolicy: "Delete"
     Properties: 
-      SubnetId: !Ref PublicSubnet
+      SubnetId: !Ref PublicSubnetA
       RouteTableId: !Ref PublicRouteTable
 
-  PrivateSubnetRouteTableAssociation: 
+  PublicSubnetRouteTableAssociationC: 
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     DeletionPolicy: "Delete"
     Properties: 
-      SubnetId: !Ref PrivateSubnet
+      SubnetId: !Ref PublicSubnetC
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetRouteTableAssociationD: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    DeletionPolicy: "Delete"
+    Properties: 
+      SubnetId: !Ref PublicSubnetD
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnetRouteTableAssociationA: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    DeletionPolicy: "Delete"
+    Properties: 
+      SubnetId: !Ref PrivateSubnetA
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetRouteTableAssociationC: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    DeletionPolicy: "Delete"
+    Properties: 
+      SubnetId: !Ref PrivateSubnetC
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetRouteTableAssociationD: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    DeletionPolicy: "Delete"
+    Properties: 
+      SubnetId: !Ref PrivateSubnetD
       RouteTableId: !Ref PrivateRouteTable
 
 # ------------------------------------------------------------#
@@ -196,10 +289,10 @@ Resources:
       GroupName: !Sub "${PJPrefix}-publicaccess-sg"     
       VpcId: !Ref VPC
       SecurityGroupIngress:
-        - IpProtocol: -1
-          FromPort: -1
-          ToPort: -1
-          CidrIp: !Ref PrivateSubnetCIDR
+        # - IpProtocol: -1
+        #   FromPort: -1
+        #   ToPort: -1
+        #   CidrIp: !Ref PrivateSubnetCIDR
         - IpProtocol: -1
           FromPort: -1
           ToPort: -1
@@ -345,7 +438,7 @@ Resources:
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: "0"
-          SubnetId: !Ref PublicSubnet
+          SubnetId: !Ref PublicSubnetA
           GroupSet:
             - !Ref PublicAccessSecurityGroup
       IamInstanceProfile:
@@ -364,7 +457,7 @@ Resources:
       NetworkInterfaces:
         - AssociatePublicIpAddress: false
           DeviceIndex: "0"
-          SubnetId: !Ref PrivateSubnet
+          SubnetId: !Ref PrivateSubnetA
           GroupSet:
             - !Ref PrivateAccessSecurityGroup
       IamInstanceProfile:
@@ -389,30 +482,30 @@ Outputs:
       Name: !Sub "${PJPrefix}-vpc-cidr"
 
 # Subnet
-  PublicSubnet:
-    Value: !Ref PublicSubnet
-    Export:
-      Name: !Sub "${PJPrefix}-public-subnet"
+  # PublicSubnet:
+  #   Value: !Ref PublicSubnet
+  #   Export:
+  #     Name: !Sub "${PJPrefix}-public-subnet"
 
-  PublicSubnetCIDR:
-    Value: !Ref PublicSubnetCIDR
-    Export:
-      Name: !Sub "${PJPrefix}-public-subnet-cidr"
+  # PublicSubnetCIDR:
+  #   Value: !Ref PublicSubnetCIDR
+  #   Export:
+  #     Name: !Sub "${PJPrefix}-public-subnet-cidr"
 
-  PrivateSubnet:
-    Value: !Ref PrivateSubnet
-    Export:
-      Name: !Sub "${PJPrefix}-private-subnet"
+  # PrivateSubnet:
+  #   Value: !Ref PrivateSubnet
+  #   Export:
+  #     Name: !Sub "${PJPrefix}-private-subnet"
 
-  PrivateSubnetCIDR:
-    Value: !Ref PrivateSubnetCIDR
-    Export:
-      Name: !Sub "${PJPrefix}-private-subnet-cidr"
+  # PrivateSubnetCIDR:
+  #   Value: !Ref PrivateSubnetCIDR
+  #   Export:
+  #     Name: !Sub "${PJPrefix}-private-subnet-cidr"
 
-  AccessSubnetCIDR: 
-    Value: !Ref AccessSubnetCIDR
-    Export:
-      Name: !Sub "${PJPrefix}-access-subnet-cidr"
+  # AccessSubnetCIDR: 
+  #   Value: !Ref AccessSubnetCIDR
+  #   Export:
+  #     Name: !Sub "${PJPrefix}-access-subnet-cidr"
 
 # Route
   PublicRouteTable:
