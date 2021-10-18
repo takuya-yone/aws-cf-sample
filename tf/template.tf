@@ -348,28 +348,28 @@ resource "aws_iam_instance_profile" "test-EC2instanceprofileforSSM" {
 # ------------------------------------------------------------#
 #  EC2
 # # ------------------------------------------------------------# 
-resource "aws_instance" "test-pub-ec2" {
-    ami                         = "ami-0992fc94ca0f1415a"
-    instance_type               = "t2.nano"
-    key_name                    = "takuya-yn"
-    subnet_id                   = aws_subnet.test-pub-subnet.id
-    vpc_security_group_ids      = [aws_security_group.test-public-sg.id]
-    associate_public_ip_address = true
-    # iam_instance_profile         = aws_iam_instance_profile.test-EC2instanceprofileforSSM.name
-    tags = {
-        "Name" = "test-pub-ec2"
-    }
-}
+# resource "aws_instance" "test-pub-ec2" {
+#     ami                         = "ami-0992fc94ca0f1415a"
+#     instance_type               = "t2.nano"
+#     key_name                    = "takuya-yn"
+#     subnet_id                   = aws_subnet.test-pub-subnet.id
+#     vpc_security_group_ids      = [aws_security_group.test-public-sg.id]
+#     associate_public_ip_address = true
+#     # iam_instance_profile         = aws_iam_instance_profile.test-EC2instanceprofileforSSM.name
+#     tags = {
+#         "Name" = "test-pub-ec2"
+#     }
+# }
 
-resource "aws_instance" "test-private-ec2" {
-    ami                         = "ami-0992fc94ca0f1415a"
-    instance_type               = "t2.nano"
-    key_name                    = "takuya-yn"
-    subnet_id                   = aws_subnet.test-private-subnet.id
-    vpc_security_group_ids      = [aws_security_group.test-private-sg.id]
-    associate_public_ip_address = false
-    iam_instance_profile         = aws_iam_instance_profile.test-EC2instanceprofileforSSM.name
-    tags = {
-        "Name" = "test-private-ec2"
-    }
-}
+# resource "aws_instance" "test-private-ec2" {
+#     ami                         = "ami-0992fc94ca0f1415a"
+#     instance_type               = "t2.nano"
+#     key_name                    = "takuya-yn"
+#     subnet_id                   = aws_subnet.test-private-subnet.id
+#     vpc_security_group_ids      = [aws_security_group.test-private-sg.id]
+#     associate_public_ip_address = false
+#     iam_instance_profile         = aws_iam_instance_profile.test-EC2instanceprofileforSSM.name
+#     tags = {
+#         "Name" = "test-private-ec2"
+#     }
+# }
