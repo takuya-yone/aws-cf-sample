@@ -135,6 +135,7 @@ Resources:
       AvailabilityZone: "ap-northeast-1a"
       CidrBlock: !Ref PublicSubnetACIDR
       VpcId: !Ref VPC 
+      MapPublicIpOnLaunch: "true"
       Tags: 
         - Key: Name
           Value: !Sub "${PJPrefix}-public-subnet-a"
@@ -145,7 +146,8 @@ Resources:
     Properties: 
       AvailabilityZone: "ap-northeast-1c"
       CidrBlock: !Ref PublicSubnetCCIDR
-      VpcId: !Ref VPC 
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: "true"
       Tags: 
         - Key: Name
           Value: !Sub "${PJPrefix}-public-subnet-c"
@@ -156,7 +158,8 @@ Resources:
     Properties: 
       AvailabilityZone: "ap-northeast-1d"
       CidrBlock: !Ref PublicSubnetDCIDR
-      VpcId: !Ref VPC 
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: "true"
       Tags: 
         - Key: Name
           Value: !Sub "${PJPrefix}-public-subnet-d"
@@ -301,6 +304,11 @@ Resources:
           FromPort: -1
           ToPort: -1
           CidrIp: !Ref AccessSubnetCIDR
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          # CidrIp: !Ref PublicSubnetCIDR 
+          SourceSecurityGroupId: !Ref PublicAccessSecurityGroup
         # - IpProtocol: -1
         #   FromPort: -1
         #   ToPort: -1
