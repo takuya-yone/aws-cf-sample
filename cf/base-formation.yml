@@ -293,18 +293,22 @@ Resources:
         #   FromPort: -1
         #   ToPort: -1
         #   CidrIp: !Ref PrivateSubnetCIDR
+        - IpProtocol: "tcp"
+          FromPort: 22
+          ToPort: 22
+          CidrIp: "3.112.23.0/29"
         - IpProtocol: -1
           FromPort: -1
           ToPort: -1
-          CidrIp: "{{resolve:ssm:Pub-Access-CIDR:1}}"
-        - IpProtocol: -1
-          FromPort: -1
-          ToPort: -1
-          CidrIp: "{{resolve:ssm:Proxy-CIDR-01:1}}"
-        - IpProtocol: -1
-          FromPort: -1
-          ToPort: -1
-          CidrIp: "{{resolve:ssm:Proxy-CIDR-02:1}}"
+          CidrIp: !Ref AccessSubnetCIDR
+        # - IpProtocol: -1
+        #   FromPort: -1
+        #   ToPort: -1
+        #   CidrIp: "{{resolve:ssm:Proxy-CIDR-01:1}}"
+        # - IpProtocol: -1
+        #   FromPort: -1
+        #   ToPort: -1
+        #   CidrIp: "{{resolve:ssm:Proxy-CIDR-02:1}}"
       SecurityGroupEgress:
         - IpProtocol: -1
           FromPort: -1
@@ -418,53 +422,53 @@ Resources:
   #     Roles: 
   #       - !Ref TestSSMRole
 
-  IamInstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Path: /
-      Roles:
-        - "full"
+  # IamInstanceProfile:
+  #   Type: AWS::IAM::InstanceProfile
+  #   Properties:
+  #     Path: /
+  #     Roles:
+  #       - "full"
 
 # ------------------------------------------------------------#
 #  EC2
 # ------------------------------------------------------------# 
-  PublicEC2:
-    Type: AWS::EC2::Instance
-    DeletionPolicy: "Delete"
-    Properties: 
-      ImageId: "ami-0222682d9e306dfb1"
-      InstanceType: "t2.small"
-      KeyName: !Ref EC2KeyPairName
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: true
-          DeviceIndex: "0"
-          SubnetId: !Ref PublicSubnetA
-          GroupSet:
-            - !Ref PublicAccessSecurityGroup
-      IamInstanceProfile:
-        !Ref IamInstanceProfile
-      Tags: 
-        - Key: Name
-          Value: !Sub "${PJPrefix}-public-ec2"
+  # PublicEC2:
+  #   Type: AWS::EC2::Instance
+  #   DeletionPolicy: "Delete"
+  #   Properties: 
+  #     ImageId: "ami-0222682d9e306dfb1"
+  #     InstanceType: "t2.small"
+  #     KeyName: !Ref EC2KeyPairName
+  #     NetworkInterfaces:
+  #       - AssociatePublicIpAddress: true
+  #         DeviceIndex: "0"
+  #         SubnetId: !Ref PublicSubnetA
+  #         GroupSet:
+  #           - !Ref PublicAccessSecurityGroup
+  #     IamInstanceProfile:
+  #       !Ref IamInstanceProfile
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub "${PJPrefix}-public-ec2"
 
-  PrivateEC2:
-    Type: AWS::EC2::Instance
-    DeletionPolicy: "Delete"
-    Properties: 
-      ImageId: "ami-0222682d9e306dfb1"
-      InstanceType: "t2.small"
-      KeyName: !Ref EC2KeyPairName
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: false
-          DeviceIndex: "0"
-          SubnetId: !Ref PrivateSubnetA
-          GroupSet:
-            - !Ref PrivateAccessSecurityGroup
-      IamInstanceProfile:
-        !Ref IamInstanceProfile
-      Tags: 
-        - Key: Name
-          Value: !Sub "${PJPrefix}-private-ec2"  
+  # PrivateEC2:
+  #   Type: AWS::EC2::Instance
+  #   DeletionPolicy: "Delete"
+  #   Properties: 
+  #     ImageId: "ami-0222682d9e306dfb1"
+  #     InstanceType: "t2.small"
+  #     KeyName: !Ref EC2KeyPairName
+  #     NetworkInterfaces:
+  #       - AssociatePublicIpAddress: false
+  #         DeviceIndex: "0"
+  #         SubnetId: !Ref PrivateSubnetA
+  #         GroupSet:
+  #           - !Ref PrivateAccessSecurityGroup
+  #     IamInstanceProfile:
+  #       !Ref IamInstanceProfile
+  #     Tags: 
+  #       - Key: Name
+  #         Value: !Sub "${PJPrefix}-private-ec2"  
 
 # ------------------------------------------------------------#
 # Output Parameters
@@ -530,12 +534,12 @@ Outputs:
       Name: !Sub "${PJPrefix}-sgaccess-security-group"
 
 # EC2
-  PublicEC2:
-    Value: !Ref PublicEC2
-    Export:
-      Name: !Sub "${PJPrefix}-public-ec2"
+  # PublicEC2:
+  #   Value: !Ref PublicEC2
+  #   Export:
+  #     Name: !Sub "${PJPrefix}-public-ec2"
       
-  PrivateEC2:
-    Value: !Ref PrivateEC2
-    Export:
-      Name: !Sub "${PJPrefix}-private-ec2"
+  # PrivateEC2:
+  #   Value: !Ref PrivateEC2
+  #   Export:
+  #     Name: !Sub "${PJPrefix}-private-ec2"
